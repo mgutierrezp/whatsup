@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<config>
+
+<general>
+	<location name="Madrid" timezone="Europe/Madrid" />
+	<stellarium host="127.0.0.1" scheme="http" port="8090" />
+</general>
+
+</config>	

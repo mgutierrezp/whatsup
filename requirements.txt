@@ -1,0 +1,9 @@
+astroplan
+astroquery
+ephem
+python-dateutil
+simple-term-menu
+tabulate
+tqdm
+traceback2
+xmltodict
