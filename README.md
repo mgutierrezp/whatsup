@@ -101,15 +101,7 @@ This is a very typical execution example:
 
 CONFIG FILE
 ==============
-This is an example of the config file:
-
-<?xml version="1.0" encoding="UTF-8"?>
-<config>
-	<general>
-		<location name="Madrid" timezone="Europe/Madrid" />
-		<stellarium host="127.0.0.1" scheme="http" port="8090" />
-	</general>
-</config>
+A whatsup.config.xml config file is provided. Have a look
 
 This file must reside on the same folder as whatsup application.
 
