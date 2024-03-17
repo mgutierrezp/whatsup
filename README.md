@@ -62,7 +62,9 @@ opciones:
 --moon-separation, --ms MOON_SEPARATION  
 &nbsp; &nbsp; Filtra por objetos que están a más de MOON_SEPARATION grados de la luna en la FECHA especificada  
 --stellarium, --st  
-&nbsp; &nbsp; Si se establece, hace un bucle sobre los resultados y enfoca cada objeto en Stellarium. Necesitas configurar Stellarium y el archivo de configuración de whatsup. Ver más abajo
+&nbsp; &nbsp; Si se establece, hace un bucle sobre los resultados y enfoca cada objeto en Stellarium. Necesitas configurar Stellarium y el archivo de configuración de whatsup. Ver más abajo  
+--nina-hrz, --nh  
+&nbsp; &nbsp; Si se establece, lee el archivo de horizontes de N.I.N.A. (.hrz) especificado en el xml (ver más abajo) y lo toma en cuenta para descartar objetos fuera del horizonte definido
 
 
 Este es un ejemplo de ejecución muy típico
@@ -90,4 +92,5 @@ Se proporciona un archivo de configuración whatsup.config.xml. Eche un vistazo
 Este archivo debe residir en la misma carpeta que la aplicación whatsup.  
 Tendrá que cambiar el valor de "location" y establecer desde donde se está observando. Cambie la zona horaria "timezone" en consecuencia.  
 Si quieres que whatsup realice un tour de Stellarium (ver parámetro --st arriba) necesitas habilitar el plugin Remote Control dentro de Stellarium: https://stellarium.org/doc/0.16/remoteControlDoc.html  
-Normalmente el host, esquema y puerto por defecto deberían funcionar. Cámbielo si es necesario
+Normalmente el host, esquema y puerto por defecto deberían funcionar. Cámbielo si es necesario  
+Se ha añadido también soporte para leer un archivo de horizontes de N.I.N.A. Descomente el tag 'nina horizon' y especifique el path donde reside dicho archivo. Después, al ejecutar WhatsUp, especifique la opción 'nina-hrz' para tener en cuenta este valor. Para que un objeto no sea descartado debe tener la altitud mínima 'minAlt' y estar debajo de este horizonte
