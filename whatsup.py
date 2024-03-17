@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="1.0a"
+VERSION="1.0b"
 
 import sys,argparse,logging,os,traceback,xmltodict,pytz,urllib,ephem,platform,dateutil.parser,astropy,astroplan,warnings
 
@@ -150,13 +150,17 @@ observer = Observer(location=observatory_location, name="Observer")
 
 if not options.datetime:
 	now=dt.datetime.now()
-	stime=now.astimezone(pytz.timezone(tz))
+	#stime=now.astimezone(pytz.timezone(tz))
+	stime=pytz.timezone(tz).localize(now)
 	twilight=observer.twilight_evening_astronomical(astropy.time.Time(now.replace(hour=12))).to_datetime(pytz.timezone(tz))
 	stime=twilight if stime < twilight else stime
-	stime = stime if stime != "[--]" else dt.datetime.now().astimezone(pytz.timezone(tz))
+	#stime = stime if stime != "[--]" else dt.datetime.now().astimezone(pytz.timezone(tz))
+	stime = stime if stime != "[--]" else pytz.timezone(tz).localize(now)
 else:
-	stime=dateutil.parser.parse(options.datetime).astimezone(pytz.timezone(tz))
-	stime = stime if stime > dt.datetime.now().astimezone(pytz.timezone(tz)) else  stime + dt.timedelta(days=1)
+	#stime=dateutil.parser.parse(options.datetime).astimezone(pytz.timezone(tz))
+	stime=pytz.timezone(tz).localize(dateutil.parser.parse(options.datetime))
+	#stime = stime if stime > dt.datetime.now().astimezone(pytz.timezone(tz)) else  stime + dt.timedelta(days=1)
+	stime = stime if stime > pytz.timezone(tz).localize(dt.datetime.now()) else  stime + dt.timedelta(days=1)
 	
 logger.info("date/time: %s" % stime)	
 illum=round(astroplan.moon_illumination(astropy.time.Time(stime))*100)
@@ -198,7 +202,8 @@ for oobject in objects:
 			logger.debug(" including")
 			target_coordinates = SkyCoord.from_name(oobject)
 			target = FixedTarget(coord=target_coordinates, name=oobject)
-			rise_time = observer.target_rise_time(astropy.time.Time(stime), target)
+			#rise_time = observer.target_rise_time(astropy.time.Time(stime), target)
+			rise_time = observer.target_rise_time(astropy.time.Time(stime), target, horizon=astropy.units.Quantity(options.minalt, unit='degree'))
 			set_time = observer.target_set_time(astropy.time.Time(stime), target, horizon=astropy.units.Quantity(options.minalt, unit='degree'))
 			visibleObjects.append({"object": oobject, "rise_time": rise_time, "meridian_side": meridianside, "coords": coords, "coordsAltAz": coordsAltAz, "transit": transit, 'moon_separation': moonSeparation, "set_time": set_time })
 	except Exception as e:
@@ -212,7 +217,7 @@ if len(nonResolvedObjects) > 0: logger.warning("the following objects names coul
 print()
 visibleObjects=sorted(visibleObjects, key=cmp_to_key(mikSort))
 
-headers=["object","rise time (above horizon)", "meridian side", "set time (below %s deg)" % options.minalt, "moon separation", "altitude @time"]
+headers=["object","rise time (above %s deg)" % options.minalt, "meridian side", "set time (below %s deg)" % options.minalt, "moon separation", "altitude @time"]
 t=[]
 
 for visibleObject in visibleObjects:
@@ -223,12 +228,12 @@ for visibleObject in visibleObjects:
 if len(t) > 0:
 	print()
 
-	if options.stellarium_tour:
-		st=checkStellariumStatus()
-		if st is not True:
-			logger.critical("stellarium is not available. Please check host and port config and make sure the 'Remote Control' plugin in Stellarium is enabled and properly configured. Original exception follows:")
-			print(st)
-			sys.exit(0)
+	st=checkStellariumStatus()
+	if st is not True and options.stellarium_tour:
+		logger.warning("stellarium is not available. Please check host and port config and make sure the 'Remote Control' plugin in Stellarium is enabled and properly configured. Original exception follows:")
+		print(st)
+
+	if options.stellarium_tour and st is True:
 		print()
 		print("Starting stellarium tour")
 		print()
