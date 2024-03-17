@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="1.0b"
+VERSION="1.0c"
 
 import sys,argparse,logging,os,traceback,xmltodict,pytz,urllib,ephem,platform,dateutil.parser,astropy,astroplan,warnings
 
@@ -36,6 +36,16 @@ def loadConfig():
 			
 			EarthLocation.of_address(p["config"]["general"]["location"]["@name"])
 			pytz.timezone(p["config"]["general"]["location"]["@timezone"])
+			
+			if options.nina_hrz:
+				try:
+					p["config"]["general"]["nina"]["@horizon"]
+				except:
+					logger.critical("N.I.N.A. horizon option has been specified, but no config exists. Please review!")
+					sys.exit()
+				if not os.path.exists(p["config"]["general"]["nina"]["@horizon"]) and options.nina_hrz:
+					logger.critical("N.I.N.A. horizon file does not exist: %s" % p["config"]["general"]["nina"]["@horizon"])
+					sys.exit()
 
 	except Exception as e:
 		logger.critical("error while parsing config file. Find below the original exception; most likely due to a syntax error in your config file")
@@ -74,6 +84,7 @@ def parse_options():
 	parser.add_argument("--minalt", action="store", type=checkAltitude, help="Optional. Minimum altitude ([0-90] degrees). Default 0", default=0)
 	parser.add_argument("--moon-separation", "--ms", action="store", type=checkMoonSeparation, help="Optional. Minimum separation to the moon ([0-360] degrees). Default 0", default=0)
 	parser.add_argument("--stellarium-tour", "--st", action="store_true", help="Optional. Perform a stellarium tour", default=False)
+	parser.add_argument("--nina-hrz", "--nh", action="store_true", help="Optional. Set a N.I.N.A. horizon file to limit objects altitude (set file on xml config)", required=False, default=False)
 	
 
 	return parser
@@ -126,7 +137,29 @@ def mikSort(x, y):
 	
 	return -1 if x["meridian_side"] == "east" else 1
 
+def loadNinaHorizon():
+	with open(config["config"]["general"]["nina"]["@horizon"]) as f:
+		lines = [s.strip() for s in f.readlines()]
+	hrz=list(filter(lambda x: x is not None, (map(lambda x: list(map(lambda y:Angle(y+"d"), x.split())) if not x.startswith("#") else None, lines))))
+	hrz.sort(key=lambda x:x[0], reverse=False)
+	return hrz
 
+def getAltFromNinaHorizon(az, nina_hrz):
+	prevPair=None
+	for pair in nina_hrz:
+		if pair[0] < az:
+			prevPair=pair
+			continue
+		else:
+			break
+	
+	if prevPair is None:
+		return None
+	pair1=prevPair
+	pair2=pair
+	
+	return pair1[1]+((pair2[1]-pair1[1])/(pair2[0]-pair1[0]))*(az-pair1[0])
+		
 #####################################################################################
 
 
@@ -139,7 +172,9 @@ logger.info("--- STARTING ---")
 logger.info("running %s version %s" % (SCRIPT_NAME, VERSION))
 
 config=loadConfig()
-
+if options.nina_hrz:
+	logger.info("loading N.I.N.A. horizon file: %s" % config["config"]["general"]["nina"]["@horizon"])
+	nina_hrz=loadNinaHorizon()
 
 location=config["config"]["general"]["location"]["@name"]
 tz=config["config"]["general"]["location"]["@timezone"]
@@ -195,7 +230,12 @@ for oobject in objects:
 		logger.debug(" alt: %s" % coordsAltAz.alt)
 		logger.debug(" az: %s"% coordsAltAz.az)
 		logger.debug(" moon separation: %s" % moonSeparation)
-		if coordsAltAz.alt > Angle(str(options.minalt)+"d") and moonSeparation > Angle(str(options.moon_separation)+"d"):
+		if options.nina_hrz: 
+			minAltFromNinaHrz = getAltFromNinaHorizon(coordsAltAz.az, nina_hrz)
+			logger.debug(" minimum altitude from nina horizon: %s" % minAltFromNinaHrz)
+			
+		if coordsAltAz.alt > Angle(str(options.minalt)+"d") and moonSeparation > Angle(str(options.moon_separation)+"d") \
+		and (True if not options.nina_hrz else coordsAltAz.alt > minAltFromNinaHrz):
 			transit = getTransit(stime, coords)
 			meridianside = "west" if transit < stime else "east"
 			logger.debug(" object meridian side: %s" % meridianside)

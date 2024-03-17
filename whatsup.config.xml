@@ -5,6 +5,7 @@
 <general>
 	<location name="Madrid" timezone="Europe/Madrid" />
 	<stellarium host="127.0.0.1" scheme="http" port="8090" />
+	<!-- <nina horizon="/put/your/nina_horizon_file/here" /> -->
 </general>
 
 </config>	
