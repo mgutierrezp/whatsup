@@ -2,7 +2,7 @@ INTRODUCCIÓN
 ==============
 Busca entre tus objetos astronómicos favoritos y averigua de un vistazo cuáles de ellos son visibles justo ahora, a medianoche, o en la fecha y hora que quieras. Muestra sólo aquellos cuya altitud sea superior a un valor especificado, o los que estén alejados de la luna unos grados determinados. Ten una visión más realista y deja que whatsup realice un recorrido en Stellarium con los objetos seleccionados
 
-INICIO RÁPIDO (recomendado)
+INSTALACIÓN RÁPIDA (recomendado)
 ==============
 La forma más rápida es descargar los binarios precompilados disponibles para linux y windows.  
 Sólo tienes que copiar el binario correspondiente de la carpeta "binaries".  
@@ -93,4 +93,4 @@ Este archivo debe residir en la misma carpeta que la aplicación whatsup.
 Tendrá que cambiar el valor de "location" y establecer desde donde se está observando. Cambie la zona horaria "timezone" en consecuencia.  
 Si quieres que whatsup realice un tour de Stellarium (ver parámetro --st arriba) necesitas habilitar el plugin Remote Control dentro de Stellarium: https://stellarium.org/doc/0.16/remoteControlDoc.html  
 Normalmente el host, esquema y puerto por defecto deberían funcionar. Cámbielo si es necesario  
-Se ha añadido también soporte para leer un archivo de horizontes de N.I.N.A. Descomente el tag 'nina horizon' y especifique el path donde reside dicho archivo. Después, al ejecutar WhatsUp, especifique la opción 'nina-hrz' para tener en cuenta este valor. Para que un objeto no sea descartado debe tener la altitud mínima 'minAlt' y estar debajo de este horizonte
+Se ha añadido también soporte para leer un archivo de horizontes de N.I.N.A. Descomente el tag 'nina' y especifique el path donde reside dicho archivo en 'horizon'. Después, al ejecutar WhatsUp, especifique la opción '--nina-hrz' para tener en cuenta este valor. Para que un objeto no sea descartado debe tener la altitud mínima 'minAlt' y estar por encima de este horizonte
