@@ -43,14 +43,14 @@ opciones:
 -V, --version  
 &nbsp; &nbsp; Mostrar el número de versión del programa y salir  
 --objects OBJETOS  
-&nbsp; &nbsp; Especifique la lista de objetos que desee. Puede escribir una lista de objetos separada por comas. Más fácil, puede especificar el nombre de un archivo de texto que contenga dichos objetos, uno por línea. Tenga cuidado de entrecomillar el argumento si hay espacios presentes.
+&nbsp; &nbsp; Obligatorio. Especifique la lista de objetos que desee. Puede escribir una lista de objetos separada por comas. Más fácil, puede especificar el nombre de un archivo de texto que contenga dichos objetos, uno por línea. Tenga cuidado de entrecomillar el argumento si hay espacios presentes.
 
         Ejemplos:
                 whatsup --objects M31,M42,NGC1499
                 whatsup --objects ./miArchivoDeObjetos.txt
                 whatsup --objects "M 31, M 42"
---datetime, --dt FECHA
-&nbsp; &nbsp; fecha y hora de observación. Consulte los formatos compatibles: https://dateutil.readthedocs.io/en/stable/parser.html. Si no se especifica, se establece automáticamente el próximo crepúsculo astronómico, o la hora actual si es posterior.  
+--datetime, --dt FECHA  
+&nbsp; &nbsp; Opcional. Fecha y hora de observación. Consulte los formatos compatibles: https://dateutil.readthedocs.io/en/stable/parser.html. Si no se especifica, se establece automáticamente el próximo crepúsculo astronómico, o la hora actual si es posterior.  
         Normalmente debería ser suficiente con "AAAA-MM-DD HH:MM" o simplemente "HH:MM".
         Si se especifica el formato "HH:MM", se añadirá un día extra si la hora es posterior a medianoche.
 
