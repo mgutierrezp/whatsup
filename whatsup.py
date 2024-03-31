@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="1.0c"
+VERSION="1.0d"
 
 import sys,argparse,logging,os,traceback,xmltodict,pytz,urllib,ephem,platform,dateutil.parser,astropy,astroplan,warnings
 
@@ -31,11 +31,20 @@ def loadConfig():
 		sys.exit(1)
 
 	try:
-		with open(CONFIG_FILE, "r") as f:
+		with open(CONFIG_FILE, "r", encoding="utf-8") as f:
 			p=xmltodict.parse(f.read(), force_list=('zone'))
 			
-			EarthLocation.of_address(p["config"]["general"]["location"]["@name"])
-			pytz.timezone(p["config"]["general"]["location"]["@timezone"])
+			try:
+				EarthLocation.of_address(p["config"]["general"]["location"]["@name"])
+			except:
+				logger.critical("Error while resolving location %s. Please check spelling" % p["config"]["general"]["location"]["@name"])
+				sys.exit(1)
+			
+			try:
+				pytz.timezone(p["config"]["general"]["location"]["@timezone"])
+			except:
+				logger.critical("Error while resolving timezone %s. Please check spelling" % p["config"]["general"]["location"]["@timezone"])
+				sys.exit(1)
 			
 			if options.nina_hrz:
 				try:
@@ -138,7 +147,7 @@ def mikSort(x, y):
 	return -1 if x["meridian_side"] == "east" else 1
 
 def loadNinaHorizon():
-	with open(config["config"]["general"]["nina"]["@horizon"]) as f:
+	with open(config["config"]["general"]["nina"]["@horizon"], "r", encoding="utf-8") as f:
 		lines = [s.strip() for s in f.readlines()]
 	hrz=list(filter(lambda x: x is not None, (map(lambda x: list(map(lambda y:Angle(y+"d"), x.split())) if not x.startswith("#") else None, lines))))
 	hrz.sort(key=lambda x:x[0], reverse=False)
@@ -181,9 +190,12 @@ tz=config["config"]["general"]["location"]["@timezone"]
 logger.info("location: %s (%s)" % (location, tz))
 
 observatory_location = EarthLocation.of_address(location)
+logger.debug("location latitude: %s" % observatory_location.lat)
+logger.debug("location longitude: %s" % observatory_location.lon)
 observer = Observer(location=observatory_location, name="Observer")
 
 if not options.datetime:
+	logger.debug("datetime not specified. Setting to next twilight or current datetime")
 	now=dt.datetime.now()
 	#stime=now.astimezone(pytz.timezone(tz))
 	stime=pytz.timezone(tz).localize(now)
@@ -197,17 +209,19 @@ else:
 	#stime = stime if stime > dt.datetime.now().astimezone(pytz.timezone(tz)) else  stime + dt.timedelta(days=1)
 	stime = stime if stime > pytz.timezone(tz).localize(dt.datetime.now()) else  stime + dt.timedelta(days=1)
 	
-logger.info("date/time: %s" % stime)	
+logger.info("observation date/time: %s" % stime)	
 illum=round(astroplan.moon_illumination(astropy.time.Time(stime))*100)
 logger.info("moon illumination is %s%%" % illum)
 	
 if os.path.exists(options.objects):
-	with open(options.objects) as f:
+	logger.debug("opening objects file: %s" % options.objects)
+	with open(options.objects, "r", encoding="utf-8") as f:
 		objects = [s.strip() for s in f.readlines()]
 else:
 	objects=options.objects.split(",")
 
 visibleObjects=[]
+nonVisibleObjects=[]
 moonAltAz = observer.moon_altaz(stime)
 moonAlt, moonAz = moonAltAz.alt, moonAltAz.az
 logger.debug("moon AltAz coords: alt %s az %s" %(moonAlt, moonAz))
@@ -219,7 +233,7 @@ nonResolvedObjects=[]
 
 for oobject in objects:
 	bar.update()
-	logger.debug("object: %s" % oobject)
+	logger.debug("computing object: %s" % oobject)
 	try:
 		try:
 			coords=SkyCoord.from_name(oobject)
@@ -239,13 +253,17 @@ for oobject in objects:
 			transit = getTransit(stime, coords)
 			meridianside = "west" if transit < stime else "east"
 			logger.debug(" object meridian side: %s" % meridianside)
-			logger.debug(" including")
 			target_coordinates = SkyCoord.from_name(oobject)
 			target = FixedTarget(coord=target_coordinates, name=oobject)
 			#rise_time = observer.target_rise_time(astropy.time.Time(stime), target)
 			rise_time = observer.target_rise_time(astropy.time.Time(stime), target, horizon=astropy.units.Quantity(options.minalt, unit='degree'))
 			set_time = observer.target_set_time(astropy.time.Time(stime), target, horizon=astropy.units.Quantity(options.minalt, unit='degree'))
-			visibleObjects.append({"object": oobject, "rise_time": rise_time, "meridian_side": meridianside, "coords": coords, "coordsAltAz": coordsAltAz, "transit": transit, 'moon_separation': moonSeparation, "set_time": set_time })
+			d={"object": oobject, "rise_time": rise_time, "meridian_side": meridianside, "coords": coords, "coordsAltAz": coordsAltAz, "transit": transit, 'moon_separation': moonSeparation, "set_time": set_time }
+			logger.debug(" including object %s: %s" % (oobject, d))
+			visibleObjects.append(d)
+		else:
+			logger.debug(" object %s does not meet constraints. Skipping" % oobject)
+			nonVisibleObjects.append(oobject)
 	except Exception as e:
 		logger.warning(e)
 		pass
@@ -257,6 +275,9 @@ if len(nonResolvedObjects) > 0: logger.warning("the following objects names coul
 print()
 visibleObjects=sorted(visibleObjects, key=cmp_to_key(mikSort))
 
+if len(nonVisibleObjects) > 0:
+	logger.info("non visible objects: %s" % nonVisibleObjects)
+	
 headers=["object","rise time (above %s deg)" % options.minalt, "meridian side", "set time (below %s deg)" % options.minalt, "moon separation", "altitude @time"]
 t=[]
 
