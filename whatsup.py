@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="1.0d"
+VERSION="1.0e"
 
 import sys,argparse,logging,os,traceback,xmltodict,pytz,urllib,ephem,platform,dateutil.parser,astropy,astroplan,warnings
 
@@ -117,11 +117,28 @@ def setup_custom_logger(name, options):
 
 
 def setStellariumFocus(target):
-	urllib.request.urlopen("%s://%s:%s/api/main/focus" % (config["config"]["general"]["stellarium"]["@scheme"],config["config"]["general"]["stellarium"]["@host"],config["config"]["general"]["stellarium"]["@port"]),data=b"target=%b" % bytes(target,'utf-8'))
-
-def setStellariumFocus2(target):
-	urllib.request.urlopen("%s://%s:%s/api/main/focus" % (config["config"]["general"]["stellarium"]["@scheme"],config["config"]["general"]["stellarium"]["@host"],config["config"]["general"]["stellarium"]["@port"]),data=b"target=%b" % bytes(target.split()[0],'utf-8'))
+	server="%s://%s:%s" % (config["config"]["general"]["stellarium"]["@scheme"],config["config"]["general"]["stellarium"]["@host"],config["config"]["general"]["stellarium"]["@port"])
+	target=target.split()[0].strip()
 	
+	findquery=urllib.request.urlopen("%s/api/objects/find?str=%s" % (server, urllib.parse.quote(target)))
+	if findquery.status == 200:
+		doFocus=False
+		_target=eval(findquery.read().decode())
+		if _target != []:
+			_target=_target[0]
+			doFocus=True
+		else:
+			target=target.split()[0].strip()
+			findquery=urllib.request.urlopen("%s/api/simbad/lookup?str=%s" % (server, urllib.parse.quote(target)))
+			if findquery.status == 200:
+				_target=eval(findquery.read().decode())
+				if _target["status"] == "found":
+					_target=_target["results"]["names"][0]
+					doFocus=True
+		if doFocus:
+			urllib.request.urlopen("%s/api/main/focus" % server,data=b"target=%b&mode=center" % bytes(urllib.parse.quote(_target),'utf-8'))
+
+
 def setStellariumTime(t):
 	urllib.request.urlopen("%s://%s:%s/api/main/time" % (config["config"]["general"]["stellarium"]["@scheme"],config["config"]["general"]["stellarium"]["@host"],config["config"]["general"]["stellarium"]["@port"]),data=b"time=%b" % bytes(t,'utf-8'))
 
@@ -233,6 +250,7 @@ nonResolvedObjects=[]
 
 for oobject in objects:
 	bar.update()
+	oobject=oobject.replace(" ","_")
 	logger.debug("computing object: %s" % oobject)
 	try:
 		try:
@@ -305,7 +323,7 @@ if len(t) > 0:
 			tt=tabulate(t, headers=headers).split("\n")
 			print("  "+tt[0])
 			print("  "+tt[1])
-			terminal_menu = TerminalMenu(tt[2:], preview_command=setStellariumFocus2, preview_size=0.1, clear_menu_on_exit = False)
+			terminal_menu = TerminalMenu(tt[2:], preview_command=setStellariumFocus, preview_size=0.1, clear_menu_on_exit = False)
 			menu_entry_index = terminal_menu.show()
 		else:
 			i=1
@@ -318,7 +336,7 @@ if len(t) > 0:
 				i+=1
 				for visibleObject in visibleObjects:
 					print(visibleObject["object"])
-					setStellariumFocus(visibleObject["object"])
+					setStellariumFocus(visibleObject["object"] + " dummy")
 					input()
 	else:
 		print(tabulate(t, headers = headers))
