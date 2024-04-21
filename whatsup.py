@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-VERSION="1.0e"
+VERSION="1.0f"
 
 import sys,argparse,logging,os,traceback,xmltodict,pytz,urllib,ephem,platform,dateutil.parser,astropy,astroplan,warnings
 
@@ -119,10 +119,12 @@ def setup_custom_logger(name, options):
 def setStellariumFocus(target):
 	server="%s://%s:%s" % (config["config"]["general"]["stellarium"]["@scheme"],config["config"]["general"]["stellarium"]["@host"],config["config"]["general"]["stellarium"]["@port"])
 	target=target.split()[0].strip()
+	target=target.replace("_", " ")
 	
 	findquery=urllib.request.urlopen("%s/api/objects/find?str=%s" % (server, urllib.parse.quote(target)))
 	if findquery.status == 200:
 		doFocus=False
+		byPosition=False
 		_target=eval(findquery.read().decode())
 		if _target != []:
 			_target=_target[0]
@@ -133,10 +135,14 @@ def setStellariumFocus(target):
 			if findquery.status == 200:
 				_target=eval(findquery.read().decode())
 				if _target["status"] == "found":
-					_target=_target["results"]["names"][0]
+					position=str(_target["results"]["positions"][0])
 					doFocus=True
+					byPosition=True
 		if doFocus:
-			urllib.request.urlopen("%s/api/main/focus" % server,data=b"target=%b&mode=center" % bytes(urllib.parse.quote(_target),'utf-8'))
+			if byPosition:
+				urllib.request.urlopen("%s/api/main/focus" % server,data=b"position=%b&mode=center" % bytes(urllib.parse.quote(position),'utf-8'))
+			else:
+				urllib.request.urlopen("%s/api/main/focus" % server,data=b"target=%b&mode=center" % bytes(urllib.parse.quote(_target),'utf-8'))
 
 
 def setStellariumTime(t):
@@ -251,6 +257,7 @@ nonResolvedObjects=[]
 for oobject in objects:
 	bar.update()
 	oobject=oobject.replace(" ","_")
+	#oobject=oobject.replace("_"," ")
 	logger.debug("computing object: %s" % oobject)
 	try:
 		try:
